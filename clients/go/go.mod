@@ -1,3 +1,3 @@
-module github.com/mq-gabs/simple-cache-server/tree/main/clients/go
+module github.com/mq-gabs/simple-cache-server/clients/go
 
 go 1.23.3

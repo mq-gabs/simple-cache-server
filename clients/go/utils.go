@@ -1,4 +1,4 @@
-package main
+package scas
 
 func Join2Bytes(b1, b2, b3 []byte) []byte {
 	return append(b1, append(b2, b3...)...)

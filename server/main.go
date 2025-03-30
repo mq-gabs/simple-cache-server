@@ -11,18 +11,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot connect: %v", err)
 	}
-	
+
 	store := NewStore()
 
 	for {
-		log.Println("Accepting...")
 		conn, err := l.Accept()
-		
+
 		if err != nil {
 			log.Printf("Error when accepting connection: %v", err)
 			continue
 		}
-		
+
 		h := NewHandler(conn, store)
 
 		go h.Handle()

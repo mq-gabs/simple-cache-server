@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	host string
-	port uint16 
+	port uint16
 }
 
 func CreateConnection(config *Config) (*Connection, error) {
@@ -22,14 +22,15 @@ func CreateConnection(config *Config) (*Connection, error) {
 		config.port = 9012
 	}
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", config.host, config.port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%v", config.host, config.port))
 
 	if err != nil {
 		return nil, fmt.Errorf("cannot create connection: %v", err)
 	}
 
 	return &Connection{
-		conn: conn,
+		conn:   conn,
 		reader: *bufio.NewReader(conn),
 	}, nil
 }
+

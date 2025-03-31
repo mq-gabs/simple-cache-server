@@ -8,20 +8,20 @@ import (
 )
 
 type Connection struct {
-	conn net.Conn
+	conn   net.Conn
 	reader bufio.Reader
 }
 
 const (
 	bSep byte = byte(10)
 
-	bReqGet byte = byte(48)	
-	bReqSet byte = byte(49)
+	bReqGet   byte = byte(48)
+	bReqSet   byte = byte(49)
 	bReqErase byte = byte(50)
 
-	bRespErrorEmpty byte = byte(48)
-	bRespErrorNotEmpty byte = byte(49)
-	bRespSuccessEmpty byte = byte(50)
+	bRespErrorEmpty      byte = byte(48)
+	bRespErrorNotEmpty   byte = byte(49)
+	bRespSuccessEmpty    byte = byte(50)
 	bRespSuccessNotEmpty byte = byte(51)
 )
 
@@ -31,7 +31,7 @@ func (c *Connection) readNext() ([]byte, error) {
 
 func (c *Connection) readResponse() (string, error) {
 	s, err := c.readNext()
-	
+
 	if err != nil {
 		return "", fmt.Errorf("cannot read response status: %s", err)
 	}
@@ -41,18 +41,18 @@ func (c *Connection) readResponse() (string, error) {
 	}
 
 	status := s[0]
-	
+
 	if status == bRespErrorEmpty {
 		return "", errors.New("some error ocurred")
 	}
 
 	if status == bRespErrorNotEmpty {
 		content, err := c.readNext()
-		
+
 		if err != nil {
 			return "", fmt.Errorf("cannot read error content: %v", err)
 		}
-		
+
 		return "", fmt.Errorf("server Error: %s", content)
 	}
 
@@ -62,8 +62,7 @@ func (c *Connection) readResponse() (string, error) {
 
 	if status == bRespSuccessNotEmpty {
 		content, err := c.readNext()
-		c.readNext()
-		
+
 		if err != nil {
 			return "", fmt.Errorf("cannot read success content: %s", err)
 		}
@@ -75,10 +74,10 @@ func (c *Connection) readResponse() (string, error) {
 }
 
 func (c *Connection) Get(key string) (string, error) {
-	bKey := JoinByte([]byte(key), bSep)
+	bKey := joinByte([]byte(key), bSep)
 
-	_, err := c.conn.Write(JoinBytes([]byte{bReqGet, bSep}, bKey))
-	
+	_, err := c.conn.Write(joinBytes([]byte{bReqGet, bSep}, bKey))
+
 	if err != nil {
 		return "", fmt.Errorf("cannot get: %v", err)
 	}
@@ -86,11 +85,11 @@ func (c *Connection) Get(key string) (string, error) {
 	return c.readResponse()
 }
 
-func (c *Connection) Set(key, value string) (error) {
-	bKey := JoinByte([]byte(key), bSep) 
-	bValue := JoinByte([]byte(value), bSep)
+func (c *Connection) Set(key, value string) error {
+	bKey := joinByte([]byte(key), bSep)
+	bValue := joinByte([]byte(value), bSep)
 
-	_, err := c.conn.Write(Join2Bytes([]byte{bReqSet, bSep}, bKey, bValue))
+	_, err := c.conn.Write(join2Bytes([]byte{bReqSet, bSep}, bKey, bValue))
 
 	if err != nil {
 		return fmt.Errorf("cannot set: %v", err)
@@ -101,10 +100,10 @@ func (c *Connection) Set(key, value string) (error) {
 	return err
 }
 
-func (c *Connection) Erase(key string) (error) {
-	bKey := JoinByte([]byte(key), bSep)
+func (c *Connection) Erase(key string) error {
+	bKey := joinByte([]byte(key), bSep)
 
-	_, err := c.conn.Write(JoinBytes([]byte{bReqErase, bSep}, bKey))
+	_, err := c.conn.Write(joinBytes([]byte{bReqErase, bSep}, bKey))
 
 	if err != nil {
 		return fmt.Errorf("cannot erase: %v", err)
@@ -113,4 +112,8 @@ func (c *Connection) Erase(key string) (error) {
 	_, err = c.readResponse()
 
 	return err
+}
+
+func (c *Connection) Close() error {
+	return c.conn.Close()
 }

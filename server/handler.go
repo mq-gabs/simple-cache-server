@@ -138,9 +138,9 @@ func (h *Handler) respSuccess(content []byte) {
 		return
 	}
 
-	bContent := joinByte(content, bSep)
+	// bContent := joinByte(content, bSep)
 
-	h.conn.Write(joinBytes([]byte{bRespSuccessNotEmpty, bSep}, bContent))
+	h.conn.Write(joinBytes([]byte{bRespSuccessNotEmpty, bSep}, content))
 }
 
 func (h *Handler) respError(err error) {

@@ -13,15 +13,73 @@ type StoreItem struct {
 	Value *[]byte
 }
 
+type TTLKey struct {
+	key  string
+	next *TTLKey
+}
+
 type Store struct {
-	data       map[string]StoreItem
-	lastChange time.Time
+	data        map[string]StoreItem
+	lastChange  time.Time
+	ttlFirstKey *TTLKey
 }
 
 func NewStore() *Store {
-	return &Store{
+	s := &Store{
 		data: make(map[string]StoreItem),
 	}
+
+	go s.checkTTL()
+
+	return s
+}
+
+func (s *Store) checkTTL() {
+	defer func() {
+		time.Sleep(time.Second)
+		go s.checkTTL()
+	}()
+
+	if s.ttlFirstKey == nil {
+		return
+	}
+
+	var prevTTLKey *TTLKey
+	ttlKey := s.ttlFirstKey
+
+	for ttlKey != nil {
+		if s.data[ttlKey.key].DieIn.After(time.Now()) {
+			delete(s.data, ttlKey.key)
+			if prevTTLKey != nil {
+				prevTTLKey.next = ttlKey.next
+			} else {
+				s.ttlFirstKey = ttlKey.next
+			}
+		} else {
+			prevTTLKey = ttlKey
+		}
+
+		ttlKey = ttlKey.next
+	}
+}
+
+func (s *Store) addKeyToTTL(key string) {
+	ttlKey := TTLKey{
+		key: key,
+	}
+
+	if s.ttlFirstKey == nil {
+		s.ttlFirstKey = &ttlKey
+		return
+	}
+
+	currTTLKey := s.ttlFirstKey
+
+	for currTTLKey.next != nil {
+		currTTLKey = currTTLKey.next
+	}
+
+	currTTLKey.next = &ttlKey
 }
 
 func (s *Store) setLastChange() {
@@ -78,6 +136,8 @@ func (s *Store) SetWithTTL(key string, value []byte, ttl uint32) error {
 	mutex.Lock()
 
 	s.data[key] = item
+
+	s.addKeyToTTL(key)
 
 	mutex.Unlock()
 

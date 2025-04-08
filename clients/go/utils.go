@@ -1,13 +1,10 @@
-package scas
+package main
 
-func join2Bytes(b1, b2, b3 []byte) []byte {
-	return append(b1, append(b2, b3...)...)
-}
+func joinBytes(bytes [][]byte) []byte {
+  var res []byte
+  for _, b := range bytes {
+    res = append(res, b...)
+  }
 
-func joinBytes(b1, b2 []byte) []byte {
-	return append(b1, b2...)
-}
-
-func joinByte(b1 []byte, b2 byte) []byte {
-	return append(b1, b2)
+  return res
 }

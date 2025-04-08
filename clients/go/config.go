@@ -1,4 +1,4 @@
-package scas
+package main
 
 import (
 	"bufio"
@@ -33,4 +33,3 @@ func CreateConnection(config *Config) (*Connection, error) {
 		reader: *bufio.NewReader(conn),
 	}, nil
 }
-

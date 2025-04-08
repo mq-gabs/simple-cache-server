@@ -8,14 +8,19 @@ import (
 
 var mutex = sync.Mutex{}
 
+type StoreItem struct {
+	DieIn *time.Time
+	Value *[]byte
+}
+
 type Store struct {
-	data map[string][]byte
+	data       map[string]StoreItem
 	lastChange time.Time
 }
 
 func NewStore() *Store {
 	return &Store{
-		data: make(map[string][]byte),
+		data: make(map[string]StoreItem),
 	}
 }
 
@@ -23,20 +28,25 @@ func (s *Store) setLastChange() {
 	s.lastChange = time.Now()
 }
 
-func (s *Store) Get(key string) ([]byte, error) {
-	value, ok := s.data[key]
+func (s *Store) Get(key string) (*[]byte, error) {
+	item, ok := s.data[key]
 
 	if !ok {
 		return nil, fmt.Errorf("key does not exists: %s", key)
 	}
 
-	return value, nil
+	return item.Value, nil
 }
 
 func (s *Store) Set(key string, value []byte) error {
 	mutex.Lock()
-	
-	s.data[key] = value
+
+	item := StoreItem{
+		DieIn: nil,
+		Value: &value,
+	}
+
+	s.data[key] = item
 
 	s.setLastChange()
 
@@ -47,12 +57,31 @@ func (s *Store) Set(key string, value []byte) error {
 
 func (s *Store) Erase(key string) error {
 	mutex.Lock()
-	
+
 	delete(s.data, key)
 
 	s.setLastChange()
 
 	mutex.Unlock()
+
+	return nil
+}
+
+func (s *Store) SetWithTTL(key string, value []byte, ttl uint32) error {
+	dieIn := time.Now().Local().Add(time.Second * time.Duration(ttl))
+
+	item := StoreItem{
+		DieIn: &dieIn,
+		Value: &value,
+	}
+
+	mutex.Lock()
+
+	s.data[key] = item
+
+	mutex.Unlock()
+
+	s.setLastChange()
 
 	return nil
 }

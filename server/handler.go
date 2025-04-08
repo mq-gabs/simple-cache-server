@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"net"
 )
@@ -9,9 +10,10 @@ import (
 const (
 	bSep byte = byte(10)
 
-	bReqGet   byte = byte(48)
-	bReqSet   byte = byte(49)
-	bReqErase byte = byte(50)
+	bReqGet        byte = byte(48)
+	bReqSet        byte = byte(49)
+	bReqErase      byte = byte(50)
+	bReqSetWithTTL byte = byte(51)
 
 	bRespErrorEmpty      byte = byte(48)
 	bRespErrorNotEmpty   byte = byte(49)
@@ -60,10 +62,43 @@ func (h *Handler) Handle() {
 			h.set()
 		case bReqErase:
 			h.erase()
+		case bReqSetWithTTL:
+			h.setWithTTL()
 		default:
 			h.respError(fmt.Errorf("action not mapped: %v", actHead))
 		}
 	}
+}
+
+func (h *Handler) setWithTTL() {
+	key, err := h.readNext()
+
+	if err != nil {
+		h.respError(fmt.Errorf("cannot read key: %v", err))
+		return
+	}
+
+	sKey := string(key)
+
+	value, err := h.readNext()
+
+	if err != nil {
+		h.respError(fmt.Errorf("cannot read value: %v", err))
+		return
+	}
+
+	ttl, err := h.readNext()
+	intTtl := binary.BigEndian.Uint32(ttl)
+
+	if err != nil {
+		h.respError(fmt.Errorf("cannot read time to live: %v", err))
+	}
+
+	if err := h.store.SetWithTTL(sKey, value, intTtl); err != nil {
+		h.respError(err)
+	}
+
+	h.respSuccess(nil)
 }
 
 func (h *Handler) get() {
@@ -83,7 +118,7 @@ func (h *Handler) get() {
 		return
 	}
 
-	h.respSuccess(value)
+	h.respSuccess(*value)
 }
 
 func (h *Handler) set() {
@@ -140,7 +175,9 @@ func (h *Handler) respSuccess(content []byte) {
 
 	// bContent := joinByte(content, bSep)
 
-	h.conn.Write(joinBytes([]byte{bRespSuccessNotEmpty, bSep}, content))
+	head := []byte{bRespSuccessNotEmpty, bSep}
+
+	h.conn.Write(joinBytes([][]byte{head, content}))
 }
 
 func (h *Handler) respError(err error) {
@@ -149,7 +186,8 @@ func (h *Handler) respError(err error) {
 		return
 	}
 
-	errBytes := joinByte([]byte(err.Error()), bSep)
+	head := []byte{bRespErrorNotEmpty, bSep}
+	errBytes := append([]byte(err.Error()), bSep)
 
-	h.conn.Write(joinBytes([]byte{bRespErrorNotEmpty, bSep}, errBytes))
+	h.conn.Write(joinBytes([][]byte{head, errBytes}))
 }

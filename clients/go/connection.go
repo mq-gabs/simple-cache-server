@@ -1,7 +1,8 @@
-package scas
+package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -15,9 +16,10 @@ type Connection struct {
 const (
 	bSep byte = byte(10)
 
-	bReqGet   byte = byte(48)
-	bReqSet   byte = byte(49)
-	bReqErase byte = byte(50)
+	bReqGet        byte = byte(48)
+	bReqSet        byte = byte(49)
+	bReqErase      byte = byte(50)
+	bReqSetWithTTL byte = byte(51)
 
 	bRespErrorEmpty      byte = byte(48)
 	bRespErrorNotEmpty   byte = byte(49)
@@ -74,9 +76,10 @@ func (c *Connection) readResponse() (string, error) {
 }
 
 func (c *Connection) Get(key string) (string, error) {
-	bKey := joinByte([]byte(key), bSep)
+  head := []byte{bReqGet, bSep}
+	bKey := append([]byte(key), bSep)
 
-	_, err := c.conn.Write(joinBytes([]byte{bReqGet, bSep}, bKey))
+	_, err := c.conn.Write(joinBytes([][]byte{head, bKey}))
 
 	if err != nil {
 		return "", fmt.Errorf("cannot get: %v", err)
@@ -86,10 +89,30 @@ func (c *Connection) Get(key string) (string, error) {
 }
 
 func (c *Connection) Set(key, value string) error {
-	bKey := joinByte([]byte(key), bSep)
-	bValue := joinByte([]byte(value), bSep)
+  head := []byte{bReqSet, bSep}
+	bKey := append([]byte(key), bSep)
+	bValue := append([]byte(value), bSep)
 
-	_, err := c.conn.Write(join2Bytes([]byte{bReqSet, bSep}, bKey, bValue))
+	_, err := c.conn.Write(joinBytes([][]byte{head, bKey, bValue}))
+
+	if err != nil {
+		return fmt.Errorf("cannot set: %v", err)
+	}
+
+	_, err = c.readResponse()
+
+	return err
+}
+
+func (c *Connection) SetWithTTL(key, value string, ttl uint32) error {
+  head := []byte{bReqSetWithTTL, bSep}
+	bKey := append([]byte(key), bSep)
+	bValue := append([]byte(value), bSep)
+	bTTL := make([]byte, 4)
+	binary.BigEndian.PutUint32(bTTL[0:4], ttl)
+	bTTL = append(bTTL, bSep)
+
+	_, err := c.conn.Write(joinBytes([][]byte{head, bKey, bValue, bTTL}))
 
 	if err != nil {
 		return fmt.Errorf("cannot set: %v", err)
@@ -101,9 +124,10 @@ func (c *Connection) Set(key, value string) error {
 }
 
 func (c *Connection) Erase(key string) error {
-	bKey := joinByte([]byte(key), bSep)
+  head := []byte{bReqErase, bSep}
+	bKey := append([]byte(key), bSep)
 
-	_, err := c.conn.Write(joinBytes([]byte{bReqErase, bSep}, bKey))
+	_, err := c.conn.Write(joinBytes([][]byte{head, bKey}))
 
 	if err != nil {
 		return fmt.Errorf("cannot erase: %v", err)

@@ -15,7 +15,6 @@ func main() {
 	store := NewStore()
 
 	for {
-		log.Println("Accepting...")
 		conn, err := l.Accept()
 
 		if err != nil {
@@ -23,7 +22,6 @@ func main() {
 			continue
 		}
 
-		log.Println("Handling...")
 		h := NewHandler(conn, store)
 
 		go h.Handle()

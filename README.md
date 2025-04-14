@@ -37,6 +37,8 @@ Run the server:
 ```bash
 ./scas
 ```
+You can view keys and its values by access port `9013` on browser.
+
 
 ## :link: Protocol
 

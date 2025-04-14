@@ -1,0 +1,40 @@
+<html>
+  <head>
+    <title>Simple Cache Server</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      th, td {
+        padding: 8px; 
+        border-right: 1px solid black;
+        border-bottom: 1px solid black;
+      }
+
+      table {
+        border-top: 1px solid black;
+        border-left: 1px solid black;
+      } 
+    </style>
+  </head>
+  <body>
+    <h1>Keys</h1>
+    {{ if .Table }}
+      <table>
+        <tr>
+          <th>Key</th>
+          <th>Value</th>
+        </tr>
+      {{ range .Table }}
+        <tr>
+          <td>{{ .Key }}</td>
+          <td>{{ .Value }}</td>
+        </tr>
+      {{ end }}
+      </table> 
+    {{ end }}
+  </body>
+</html>

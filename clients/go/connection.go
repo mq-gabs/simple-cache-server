@@ -38,7 +38,7 @@ func (c *Connection) readResponse() (string, error) {
 		return "", fmt.Errorf("cannot read response status: %s", err)
 	}
 
-	if len(s) > 2 || len(s) < 2 {
+	if len(s) != 2 {
 		return "", fmt.Errorf("status is invalid: %v", s)
 	}
 
@@ -76,7 +76,7 @@ func (c *Connection) readResponse() (string, error) {
 }
 
 func (c *Connection) Get(key string) (string, error) {
-  head := []byte{bReqGet, bSep}
+	head := []byte{bReqGet, bSep}
 	bKey := append([]byte(key), bSep)
 
 	_, err := c.conn.Write(joinBytes([][]byte{head, bKey}))
@@ -89,7 +89,7 @@ func (c *Connection) Get(key string) (string, error) {
 }
 
 func (c *Connection) Set(key, value string) error {
-  head := []byte{bReqSet, bSep}
+	head := []byte{bReqSet, bSep}
 	bKey := append([]byte(key), bSep)
 	bValue := append([]byte(value), bSep)
 
@@ -105,7 +105,7 @@ func (c *Connection) Set(key, value string) error {
 }
 
 func (c *Connection) SetWithTTL(key, value string, ttl uint32) error {
-  head := []byte{bReqSetWithTTL, bSep}
+	head := []byte{bReqSetWithTTL, bSep}
 	bKey := append([]byte(key), bSep)
 	bValue := append([]byte(value), bSep)
 	bTTL := make([]byte, 4)
@@ -124,7 +124,7 @@ func (c *Connection) SetWithTTL(key, value string, ttl uint32) error {
 }
 
 func (c *Connection) Erase(key string) error {
-  head := []byte{bReqErase, bSep}
+	head := []byte{bReqErase, bSep}
 	bKey := append([]byte(key), bSep)
 
 	_, err := c.conn.Write(joinBytes([][]byte{head, bKey}))

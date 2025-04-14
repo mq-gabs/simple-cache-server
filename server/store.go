@@ -8,6 +8,11 @@ import (
 
 var mutex = sync.Mutex{}
 
+type TableItem struct {
+	Key   string
+	Value string
+}
+
 type StoreItem struct {
 	DieIn *time.Time
 	Value *[]byte
@@ -32,6 +37,19 @@ func NewStore() *Store {
 	go s.checkTTL()
 
 	return s
+}
+
+func (s *Store) GetTable() []TableItem {
+	var table []TableItem
+
+	for k := range s.data {
+		table = append(table, TableItem{
+			Key:   k,
+			Value: string(*s.data[k].Value),
+		})
+	}
+
+	return table
 }
 
 func (s *Store) checkTTL() {

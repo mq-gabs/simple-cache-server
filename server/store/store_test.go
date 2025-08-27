@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestSetAndGet(t *testing.T) {
-	s := NewStore()
+	s := New()
 
 	if err := s.Set("name", []byte("John Doe")); err != nil {
 		t.Fatal(err)
@@ -24,26 +24,30 @@ func TestSetAndGet(t *testing.T) {
 }
 
 func TestTTL(t *testing.T) {
-	s := NewStore()
+	key := "name"
+	value := "John Doe"
+	keyTTL := 1
+	keyDestroyTimeDelay := time.Second
 
-	if err := s.SetWithTTL("name", []byte("John Doe"), 1000); err != nil {
+	s := New()
+	s.configBasic.keyDestroyTimeDelay = keyDestroyTimeDelay
+
+	if err := s.SetWithTTL(key, []byte(value), uint32(keyTTL)); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := s.Get("name")
-
+	res, err := s.Get(key)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if string(*res) != "John Doe" {
+	if string(*res) != value {
 		t.Fatalf("invalid response: %v", res)
 	}
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(keyDestroyTimeDelay + time.Second)
 
-	res, err = s.Get("name")
-
+	res, err = s.Get(key)
 	if err == nil {
 		t.Fatalf("error should not be nil | response: %v", res)
 	}

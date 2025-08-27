@@ -4,6 +4,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"scas/handler"
+	"scas/store"
 	"text/template"
 )
 
@@ -14,7 +16,7 @@ func main() {
 		log.Fatalf("Cannot connect: %v", err)
 	}
 
-	store := NewStore()
+	store := store.New()
 	go httpServer(store)
 
 	for {
@@ -25,17 +27,17 @@ func main() {
 			continue
 		}
 
-		h := NewHandler(conn, store)
+		h := handler.New(conn, store)
 
 		go h.Handle()
 	}
 }
 
 type IndexTemplate struct {
-	Table []TableItem
+	Table []store.TableItem
 }
 
-func httpServer(s *Store) {
+func httpServer(s *store.Store) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		t, _ := template.ParseFiles("templates/index.html")
 

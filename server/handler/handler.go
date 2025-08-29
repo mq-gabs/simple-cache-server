@@ -3,7 +3,6 @@ package handler
 import (
 	"bufio"
 	"encoding/binary"
-	"fmt"
 	"net"
 	"scas/store"
 	"scas/utils"
@@ -133,7 +132,7 @@ func (h *Handler) get() {
 func (h *Handler) set() {
 	key, err := h.readNext()
 	if err != nil {
-		h.respError(fmt.Errorf("cannot read key: %v", err))
+		h.respError(utils.FmtErr(errCannotReadKey, err))
 		return
 	}
 

@@ -13,7 +13,7 @@ func main() {
 	l, err := net.Listen("tcp", ":9012")
 
 	if err != nil {
-		log.Fatalf("Cannot connect: %v", err)
+		log.Fatalf("Cannot listen: %v", err)
 	}
 
 	store := store.New()

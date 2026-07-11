@@ -1,5 +1,7 @@
 package protocol
 
+const FlagsSize = 1
+
 type Flag byte
 
 const (

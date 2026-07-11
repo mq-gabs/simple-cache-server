@@ -1,19 +1,35 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
 	"scas/handler"
 	"scas/store"
+	"scas/utils/worker"
 	"text/template"
 )
 
-func main() {
-	l, err := net.Listen("tcp", ":9012")
+var logger = log.Default()
 
+const (
+	protoTCP   = "tcp"
+	serverPort = "9012"
+
+	NumWorkers     = 1000
+	NumWorkerQueue = 100
+)
+
+func main() {
+	ctx := context.Background()
+
+	w := worker.New(ctx, NumWorkers, NumWorkerQueue)
+	defer w.Stop()
+
+	l, err := net.Listen(protoTCP, ":"+serverPort)
 	if err != nil {
-		log.Fatalf("Cannot listen: %v", err)
+		log.Fatalf("[ERROR] cannot start server: %v", err)
 	}
 
 	store := store.New()
@@ -21,15 +37,16 @@ func main() {
 
 	for {
 		conn, err := l.Accept()
-
 		if err != nil {
-			log.Printf("Error when accepting connection: %v", err)
+			logger.Printf("[ERROR] cannot accept connection: %v\n", err)
 			continue
 		}
 
 		h := handler.New(conn, store)
 
-		go h.Handle()
+		w.Submit(func(poolCtx context.Context) {
+			h.Handle(poolCtx)
+		})
 	}
 }
 

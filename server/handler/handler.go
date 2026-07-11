@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bufio"
+	"context"
 	"encoding/binary"
 	"net"
 	"scas/store"
@@ -40,12 +41,11 @@ func (h *Handler) readNext() ([]byte, error) {
 	return h.reader.ReadBytes(bSep)
 }
 
-func (h *Handler) Handle() {
+func (h *Handler) Handle(ctx context.Context) {
 	defer h.conn.Close()
 
 	for {
 		actHead, err := h.readNext()
-
 		if err != nil {
 			h.respError(utils.FmtErr(errCannotReadAction, err))
 			return

@@ -3,29 +3,15 @@ package handler
 import (
 	"bufio"
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"scas/cache"
+	"scas/handler/process"
 	"scas/store"
-	"scas/utils"
 
 	"libsscas/protocol"
-)
-
-const (
-	bSep byte = byte(10)
-
-	bReqGet        byte = byte(48)
-	bReqSet        byte = byte(49)
-	bReqErase      byte = byte(50)
-	bReqSetWithTTL byte = byte(51)
-
-	bRespErrorEmpty     byte = byte(48)
-	bRespErrorContent   byte = byte(49)
-	bRespSuccessEmpty   byte = byte(50)
-	bRespSuccessContent byte = byte(51)
 )
 
 type Handler struct {
@@ -33,6 +19,7 @@ type Handler struct {
 	reader    bufio.Reader
 	newreader io.Reader
 	store     *store.Store
+	cache     *cache.Cache
 }
 
 func New(conn net.Conn, store *store.Store) *Handler {
@@ -51,7 +38,7 @@ func (h *Handler) readHeader() (*protocol.Header, error) {
 		return nil, fmt.Errorf("%w: %w", ErrCannotReadHeader, err)
 	}
 	if n != protocol.HeaderSize {
-		return nil, ErrNumberOfReadBytesIsDifferentThanExpected
+		return nil, errors.Join(ErrCannotReadHeader, ErrNumberOfReadBytesIsDifferentThanExpected)
 	}
 
 	header, err := protocol.DecodeHeader(buf)
@@ -62,157 +49,49 @@ func (h *Handler) readHeader() (*protocol.Header, error) {
 	return header, nil
 }
 
-func (h *Handler) readNext() ([]byte, error) {
-	return h.reader.ReadBytes(bSep)
+func (h *Handler) readPayload(size protocol.PayloadLength) ([]byte, error) {
+	buf := make([]byte, size)
+
+	n, err := io.ReadFull(h.conn, buf)
+	if err != nil {
+		return nil, errors.Join(ErrCannotReadPayload, err)
+	}
+	if uint32(n) != uint32(size) {
+		return nil, errors.Join(ErrCannotReadPayload, ErrNumberOfReadBytesIsDifferentThanExpected)
+	}
+
+	return buf, nil
 }
 
 func (h *Handler) Handle(ctx context.Context) {
 	defer h.conn.Close()
 
 	for {
-		actHead, err := h.readNext()
+		header, err := h.readHeader()
 		if err != nil {
-			h.respError(utils.FmtErr(errCannotReadAction, err))
 			return
 		}
 
-		if len(actHead) != 2 {
-			h.respError(utils.FmtErr(errActionIsInvalid, actHead))
+		payload, err := h.readPayload(header.PayloadLength)
+		if err != nil {
 			return
 		}
 
-		switch actHead[0] {
-		case bReqGet:
-			h.get()
-		case bReqSet:
-			h.set()
-		case bReqErase:
-			h.erase()
-		case bReqSetWithTTL:
-			h.setWithTTL()
-		default:
-			h.respError(utils.FmtErr(errActionDoesNotExists, actHead))
+		resp, err := process.Process(h.cache, header, payload)
+		if err != nil {
+			return
+		}
+		if len(resp) == 0 {
+			continue
+		}
+
+		if !h.write(resp) {
+			return
 		}
 	}
 }
 
-func (h *Handler) write(content []byte) error {
+func (h *Handler) write(content []byte) bool {
 	_, err := h.conn.Write(content)
-	return err
-}
-
-func (h *Handler) bytesJoin(bytes ...[]byte) []byte {
-	res := utils.JoinBytes(bSep, bytes...)
-	return append(res, bSep)
-}
-
-func (h *Handler) setWithTTL() {
-	key, err := h.readNext()
-
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotReadKey, err))
-		return
-	}
-
-	keyStr := string(key)
-
-	value, err := h.readNext()
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotReadValue, err))
-		return
-	}
-
-	ttl, err := h.readNext()
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotReadTTL, err))
-	}
-
-	intTtl := binary.BigEndian.Uint32(ttl)
-
-	if err := h.store.SetWithTTL(keyStr, value, intTtl); err != nil {
-		h.respError(err)
-	}
-
-	h.respSuccess(nil)
-}
-
-func (h *Handler) get() {
-	key, err := h.readNext()
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotReadKey, err))
-		return
-	}
-
-	keyStr := string(key)
-
-	value, err := h.store.Get(keyStr)
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotGetKey, err))
-		return
-	}
-
-	h.respSuccess(*value)
-}
-
-func (h *Handler) set() {
-	key, err := h.readNext()
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotReadKey, err))
-		return
-	}
-
-	keyStr := string(key)
-
-	value, err := h.readNext()
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotReadValue, err))
-		return
-	}
-
-	if err = h.store.Set(keyStr, value); err != nil {
-		h.respError(utils.FmtErr(errCannotSet, err))
-		return
-	}
-
-	h.respSuccess(nil)
-}
-
-func (h *Handler) erase() {
-	key, err := h.readNext()
-	if err != nil {
-		h.respError(utils.FmtErr(errCannotReadKey, err))
-		return
-	}
-
-	keyStr := string(key)
-
-	if err = h.store.Erase(keyStr); err != nil {
-		h.respError(utils.FmtErr(errCannotErase, err))
-		return
-	}
-
-	h.respSuccess(nil)
-}
-
-func (h *Handler) respSuccess(content []byte) {
-	if content == nil {
-		h.write([]byte{bRespSuccessEmpty, bSep})
-		return
-	}
-
-	head := []byte{bRespSuccessContent}
-
-	h.write(h.bytesJoin(head, content))
-}
-
-func (h *Handler) respError(err error) {
-	if err == nil {
-		h.write([]byte{bRespErrorEmpty, bSep})
-		return
-	}
-
-	head := []byte{bRespErrorContent}
-	errBytes := []byte(err.Error())
-
-	h.write(h.bytesJoin(head, errBytes))
+	return err == nil
 }

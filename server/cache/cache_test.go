@@ -76,13 +76,13 @@ func TestCacheLen(t *testing.T) {
 	}
 }
 
-func TestCacheClear(t *testing.T) {
+func TestCacheFlush(t *testing.T) {
 	c := New()
 
 	c.Set("a", []byte("1"))
 	c.Set("b", []byte("2"))
 
-	c.Clear()
+	c.Flush()
 
 	if got := c.Len(); got != 0 {
 		t.Fatalf("got %d, want 0", got)

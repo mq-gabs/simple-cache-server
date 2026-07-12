@@ -56,7 +56,7 @@ func (c *Cache) Len() int {
 	return n
 }
 
-func (c *Cache) Clear() {
+func (c *Cache) Flush() {
 	c.mu.Lock()
 	c.data = make(map[string][]byte)
 	c.mu.Unlock()

@@ -19,4 +19,5 @@ var (
 
 	ErrCannotReadHeader                         = errors.New("cannot read header")
 	ErrNumberOfReadBytesIsDifferentThanExpected = errors.New("number of read bytes is different than expected")
+	ErrCannotReadPayload                        = errors.New("cannot read payload")
 )

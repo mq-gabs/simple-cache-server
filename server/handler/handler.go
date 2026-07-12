@@ -4,9 +4,14 @@ import (
 	"bufio"
 	"context"
 	"encoding/binary"
+	"errors"
+	"fmt"
+	"io"
 	"net"
 	"scas/store"
 	"scas/utils"
+
+	"libsscas/protocol"
 )
 
 const (
@@ -24,17 +29,37 @@ const (
 )
 
 type Handler struct {
-	conn   net.Conn
-	reader bufio.Reader
-	store  *store.Store
+	conn      net.Conn
+	reader    bufio.Reader
+	newreader io.Reader
+	store     *store.Store
 }
 
 func New(conn net.Conn, store *store.Store) *Handler {
 	return &Handler{
-		conn:   conn,
-		reader: *bufio.NewReader(conn),
-		store:  store,
+		conn:      conn,
+		reader:    *bufio.NewReader(conn),
+		newreader: conn, store: store,
 	}
+}
+
+func (h *Handler) readHeader() (*protocol.Header, error) {
+	buf := make([]byte, protocol.HeaderSize)
+
+	n, err := io.ReadFull(h.conn, buf)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCannotReadHeader, err)
+	}
+	if n != protocol.HeaderSize {
+		return nil, ErrNumberOfReadBytesIsDifferentThanExpected
+	}
+
+	header, err := protocol.DecodeHeader(buf)
+	if err != nil {
+		return nil, errors.Join(ErrCannotReadHeader, err)
+	}
+
+	return header, nil
 }
 
 func (h *Handler) readNext() ([]byte, error) {

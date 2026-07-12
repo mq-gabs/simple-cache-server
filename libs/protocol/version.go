@@ -1,5 +1,7 @@
 package protocol
 
+import "fmt"
+
 type Version byte
 
 const (
@@ -7,3 +9,12 @@ const (
 
 	Version0 Version = 0x00
 )
+
+func isValidVersion(v Version) error {
+	switch v {
+	case Version0:
+		return nil
+	default:
+		return fmt.Errorf("%w: %b", ErrInvalidVersion, v)
+	}
+}

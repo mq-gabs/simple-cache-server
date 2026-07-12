@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 )
 
@@ -26,15 +27,29 @@ func DecodeHeader(buf []byte) (*Header, error) {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidHeaderSize, len(buf))
 	}
 
-	if SCAS != Magic(binary.BigEndian.Uint16(buf[0:MagicSize])) {
-		return nil, ErrInvalidMagicBytes
+	if err := isValidMagic(Magic(binary.BigEndian.Uint16(buf[0:MagicSize]))); err != nil {
+		return nil, errors.Join(ErrCannotDecodeHeader, err)
 	}
 
+	v := Version(buf[offsetVersion])
+	if err := isValidVersion(v); err != nil {
+		return nil, errors.Join(ErrCannotDecodeHeader, err)
+	}
+
+	c := Command(buf[offsetCommand])
+	if err := isValidCommand(c); err != nil {
+		return nil, errors.Join(ErrCannotDecodeHeader, err)
+	}
+
+	f := Flag(buf[offsetFlags])
+
+	pLen := PayloadLength(binary.BigEndian.Uint32((buf[offsetPayloadLength : offsetPayloadLength+PayloadLengthSize])))
+
 	h := &Header{
-		Version:       Version(buf[offsetVersion]),
-		Command:       Command(buf[offsetCommand]),
-		Flags:         Flag(buf[offsetFlags]),
-		PayloadLength: PayloadLength(binary.BigEndian.Uint32((buf[offsetPayloadLength : offsetPayloadLength+PayloadLengthSize]))),
+		Version:       v,
+		Command:       c,
+		Flags:         f,
+		PayloadLength: pLen,
 	}
 
 	return h, nil

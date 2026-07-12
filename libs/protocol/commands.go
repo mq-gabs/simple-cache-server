@@ -1,5 +1,7 @@
 package protocol
 
+import "fmt"
+
 type Command byte
 
 const (
@@ -11,3 +13,12 @@ const (
 	CmdSet   Command = 0x02
 	CmdErase Command = 0x03
 )
+
+func isValidCommand(c Command) error {
+	switch c {
+	case CmdGet, CmdSet, CmdErase:
+		return nil
+	default:
+		return fmt.Errorf("%w: %b", ErrInvalidCommand, c)
+	}
+}

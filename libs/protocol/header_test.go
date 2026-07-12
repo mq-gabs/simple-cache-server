@@ -57,7 +57,7 @@ func TestDecodeHeader(t *testing.T) {
 
 				return buf
 			}(),
-			wantErr: ErrInvalidMagicBytes,
+			wantErr: ErrInvalidMagic,
 		},
 	}
 

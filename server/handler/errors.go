@@ -16,4 +16,7 @@ var (
 	errCannotSet    = errors.New("cannot set")
 	errCannotErase  = errors.New("cannot erase")
 	errCannotGetKey = errors.New("cannot get key")
+
+	ErrCannotReadHeader                         = errors.New("cannot read header")
+	ErrNumberOfReadBytesIsDifferentThanExpected = errors.New("number of read bytes is different than expected")
 )

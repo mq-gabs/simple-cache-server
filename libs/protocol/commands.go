@@ -19,6 +19,6 @@ func isValidCommand(c Command) error {
 	case CmdGet, CmdSet, CmdErase:
 		return nil
 	default:
-		return fmt.Errorf("%w: %b", ErrInvalidCommand, c)
+		return fmt.Errorf("%w: %x", ErrInvalidCommand, c)
 	}
 }

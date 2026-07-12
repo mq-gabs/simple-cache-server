@@ -15,6 +15,6 @@ func isValidVersion(v Version) error {
 	case Version0:
 		return nil
 	default:
-		return fmt.Errorf("%w: %b", ErrInvalidVersion, v)
+		return fmt.Errorf("%w: %x", ErrInvalidVersion, v)
 	}
 }

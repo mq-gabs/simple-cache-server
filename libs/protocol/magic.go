@@ -14,6 +14,6 @@ func isValidMagic(m Magic) error {
 	case SCAS:
 		return nil
 	default:
-		return fmt.Errorf("%w: %b", ErrInvalidMagic, m)
+		return fmt.Errorf("%w: %x", ErrInvalidMagic, m)
 	}
 }

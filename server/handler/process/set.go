@@ -1,32 +1,31 @@
 package process
 
 import (
-	"bytes"
+	"errors"
 	"libsscas/protocol"
+	protopayload "libsscas/protocol/payload"
+	"libsscas/protocol/validate"
 	"scas/cache"
 )
 
 const (
 	setSeparator         = 0x1e
 	expectedLenAfterSpli = 2
-	minKeyLength         = 4
-	minValueLength       = 4
 )
 
 func processSet(c cache.Setter, flags protocol.Flag, payload []byte) ([]byte, error) {
-	parts := bytes.Split(payload, []byte{setSeparator})
-	if len(parts) != 2 {
-		return nil, ErrInvalidSplittedLength
+	keyBytes, value, err := protopayload.SplitPayloadSet(payload)
+	if err != nil {
+		return nil, errors.Join(ErrCrash, err)
+	}
+	key := string(keyBytes)
+
+	if err := validate.IsValidKey(key); err != nil {
+		return nil, errors.Join(ErrCrash, err)
 	}
 
-	key := string(parts[0])
-	if len(key) < minKeyLength {
-		return nil, ErrInvalidKeyLength
-	}
-
-	value := parts[1]
-	if len(value) < minValueLength {
-		return nil, ErrInvalidValueLength
+	if err := validate.IsValidValue(value); err != nil {
+		return nil, errors.Join(ErrCrash, err)
 	}
 
 	c.Set(key, value)

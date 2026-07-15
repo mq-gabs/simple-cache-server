@@ -79,12 +79,11 @@ func (h *Handler) Handle(ctx context.Context) {
 
 		resp, err := process.Process(h.cache, header, payload)
 		if err != nil {
-			return
+			continue
 		}
 		if len(resp) == 0 {
 			continue
 		}
-
 		if !h.write(resp) {
 			return
 		}

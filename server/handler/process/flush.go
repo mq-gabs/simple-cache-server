@@ -5,6 +5,7 @@ import (
 	"scas/cache"
 )
 
-func processFlush(c cache.Flusher, flags protocol.Flag, payload []byte, payloadSize int) ([]byte, error) {
+func processFlush(c cache.Flusher, flags protocol.Flag, payload []byte) ([]byte, error) {
+	c.Flush()
 	return nil, nil
 }

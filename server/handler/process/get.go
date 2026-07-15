@@ -5,6 +5,13 @@ import (
 	"scas/cache"
 )
 
-func processGet(c cache.Getter, flags protocol.Flag, payload []byte, payloadSize int) ([]byte, error) {
-	return nil, nil
+func processGet(c cache.Getter, flags protocol.Flag, payload []byte) ([]byte, error) {
+	key := string(payload)
+
+	value, ok := c.Get(key)
+	if !ok {
+		return nil, ErrKeyNotFound
+	}
+
+	return value, nil
 }

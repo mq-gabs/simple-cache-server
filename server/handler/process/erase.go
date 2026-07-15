@@ -5,6 +5,9 @@ import (
 	"scas/cache"
 )
 
-func processDelete(c cache.Deleter, flags protocol.Flag, payload []byte, payloadSize int) ([]byte, error) {
+func processDelete(c cache.Deleter, flags protocol.Flag, payload []byte) ([]byte, error) {
+	key := string(payload)
+	c.Delete(key)
+
 	return nil, nil
 }

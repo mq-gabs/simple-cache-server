@@ -2,7 +2,10 @@ package worker
 
 import (
 	"context"
+	"libsscas/utils"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 type Task func(context.Context)
@@ -10,6 +13,7 @@ type Task func(context.Context)
 type Pool struct {
 	ctx    context.Context
 	cancel context.CancelFunc
+	log    *zap.SugaredLogger
 
 	queue chan Task
 	wg    sync.WaitGroup
@@ -23,12 +27,15 @@ func New(ctx context.Context, workers, queueSize int) *Pool {
 		panic("queueSize must be >= 0")
 	}
 
+	logger := utils.FromCTX(ctx)
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	p := &Pool{
 		ctx:    ctx,
 		cancel: cancel,
 		queue:  make(chan Task, queueSize),
+		log:    logger.Named("pool"),
 	}
 
 	for range workers {
@@ -49,8 +56,10 @@ func New(ctx context.Context, workers, queueSize int) *Pool {
 
 					func() {
 						defer func() {
+							if rec := recover(); rec != nil {
+								p.log.Error("task panicked", zap.Any("recover", rec))
+							}
 							// Prevent a panic from terminating the worker.
-							recover()
 						}()
 
 						task(p.ctx)
@@ -76,12 +85,14 @@ func (p *Pool) Submit(task Task) bool {
 		return true
 
 	default:
+		p.log.Warn("queue is full")
 		return false
 	}
 }
 
 // Stop cancels the pool and waits for workers to exit.
 func (p *Pool) Stop() {
+	p.log.Info("stopping pool gracefully")
 	p.cancel()
 	p.wg.Wait()
 }

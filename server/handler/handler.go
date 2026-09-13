@@ -12,6 +12,8 @@ import (
 	"scas/store"
 
 	"libsscas/protocol"
+
+	"go.uber.org/zap"
 )
 
 type Handler struct {
@@ -20,13 +22,20 @@ type Handler struct {
 	newreader io.Reader
 	store     *store.Store
 	cache     *cache.Cache
+	log       *zap.SugaredLogger
 }
 
-func New(conn net.Conn, store *store.Store) *Handler {
+func New(conn net.Conn, store *store.Store, logger *zap.SugaredLogger) *Handler {
+	if logger == nil {
+		panic("logger must be provided")
+	}
+
 	return &Handler{
 		conn:      conn,
 		reader:    *bufio.NewReader(conn),
-		newreader: conn, store: store,
+		newreader: conn,
+		store:     store,
+		log:       logger.Named("handler"),
 	}
 }
 
@@ -69,28 +78,31 @@ func (h *Handler) Handle(ctx context.Context) {
 	for {
 		header, err := h.readHeader()
 		if err != nil {
+			h.log.Error("failed to read header", zap.Error(err))
 			return
 		}
 
 		payload, err := h.readPayload(header.PayloadLength)
 		if err != nil {
+			h.log.Error("failed to read payload", zap.Error(err))
 			return
 		}
 
 		resp, err := process.Process(h.cache, header, payload)
 		if err != nil {
+			h.log.Error("failed to process data", zap.Error(err))
 			continue
 		}
 		if len(resp) == 0 {
 			continue
 		}
-		if !h.write(resp) {
-			return
+		if err := h.write(resp); err != nil {
+			h.log.Error("failed to write response", zap.Error(err))
 		}
 	}
 }
 
-func (h *Handler) write(content []byte) bool {
+func (h *Handler) write(content []byte) error {
 	_, err := h.conn.Write(content)
-	return err == nil
+	return err
 }

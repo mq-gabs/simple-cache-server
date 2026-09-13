@@ -2,16 +2,18 @@ package main
 
 import (
 	"context"
-	"log"
+	"libsscas/logger"
 	"net"
 	"net/http"
 	"scas/handler"
 	"scas/store"
 	"scas/utils/worker"
 	"text/template"
+
+	"go.uber.org/zap"
 )
 
-var logger = log.Default()
+var log = logger.New()
 
 const (
 	protoTCP   = "tcp"
@@ -29,7 +31,7 @@ func main() {
 
 	l, err := net.Listen(protoTCP, ":"+serverPort)
 	if err != nil {
-		log.Fatalf("[ERROR] cannot start server: %v", err)
+		log.Fatalf("cannot start server", zap.Error(err))
 	}
 
 	store := store.New()
@@ -38,11 +40,11 @@ func main() {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			logger.Printf("[ERROR] cannot accept connection: %v\n", err)
+			log.Error("cannot accept connection", zap.Error(err))
 			continue
 		}
 
-		h := handler.New(conn, store)
+		h := handler.New(conn, store, log)
 
 		w.Submit(func(poolCtx context.Context) {
 			h.Handle(poolCtx)

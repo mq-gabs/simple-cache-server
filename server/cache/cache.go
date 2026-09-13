@@ -8,20 +8,35 @@ import (
 type Cache struct {
 	mu   sync.RWMutex
 	data map[string][]byte
+
+	// options
+	blockOverwrite bool
 }
 
-func New() *Cache {
-	return &Cache{
+type CacheOption func(*Cache)
+
+func New(options ...CacheOption) *Cache {
+	c := &Cache{
 		data: make(map[string][]byte),
 	}
+
+	for _, opt := range options {
+		opt(c)
+	}
+
+	return c
 }
 
-func (c *Cache) Set(key string, value []byte) {
+func (c *Cache) Set(key string, value []byte) bool {
 	v := slices.Clone(value)
-
 	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, ok := c.data[key]
+	if ok && c.blockOverwrite {
+		return false
+	}
 	c.data[key] = v
-	c.mu.Unlock()
+	return true
 }
 
 func (c *Cache) Get(key string) ([]byte, bool) {
@@ -33,7 +48,7 @@ func (c *Cache) Get(key string) ([]byte, bool) {
 		return nil, false
 	}
 
-	return append([]byte(nil), value...), true
+	return slices.Clone(value), true
 }
 
 func (c *Cache) Delete(key string) {

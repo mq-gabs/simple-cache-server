@@ -1,15 +1,16 @@
-package cache
+package cache_test
 
 import (
 	"bytes"
 	"fmt"
+	"scas/cache"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestCacheSetGet(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	want := []byte("hello")
 	c.Set("foo", want)
@@ -25,7 +26,7 @@ func TestCacheSetGet(t *testing.T) {
 }
 
 func TestCacheGetMissing(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	got, ok := c.Get("missing")
 	if ok {
@@ -37,7 +38,7 @@ func TestCacheGetMissing(t *testing.T) {
 }
 
 func TestCacheDelete(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	c.Set("foo", []byte("bar"))
 	c.Delete("foo")
@@ -48,7 +49,7 @@ func TestCacheDelete(t *testing.T) {
 }
 
 func TestCacheHas(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	if c.Has("foo") {
 		t.Fatal("expected key to not exist")
@@ -62,7 +63,7 @@ func TestCacheHas(t *testing.T) {
 }
 
 func TestCacheLen(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	if got := c.Len(); got != 0 {
 		t.Fatalf("got %d, want 0", got)
@@ -77,7 +78,7 @@ func TestCacheLen(t *testing.T) {
 }
 
 func TestCacheFlush(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	c.Set("a", []byte("1"))
 	c.Set("b", []byte("2"))
@@ -94,7 +95,7 @@ func TestCacheFlush(t *testing.T) {
 }
 
 func TestCacheSetCopiesValue(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	value := []byte("hello")
 	c.Set("foo", value)
@@ -113,7 +114,7 @@ func TestCacheSetCopiesValue(t *testing.T) {
 }
 
 func TestCacheGetReturnsCopy(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	c.Set("foo", []byte("hello"))
 
@@ -128,7 +129,7 @@ func TestCacheGetReturnsCopy(t *testing.T) {
 }
 
 func TestCacheConcurrentAccess(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	const (
 		writers = 10
@@ -183,7 +184,7 @@ func TestCacheConcurrentAccess(t *testing.T) {
 }
 
 func TestCacheConcurrentWritesAndVerify(t *testing.T) {
-	c := New()
+	c := cache.New()
 
 	const entries = 10000
 
@@ -232,4 +233,37 @@ func TestCacheConcurrentWritesAndVerify(t *testing.T) {
 	if got := c.Len(); got != entries {
 		t.Fatalf("got %d entries, want %d", got, entries)
 	}
+}
+
+func TestCacheOptions(t *testing.T) {
+	t.Run("block overwrite", func(t *testing.T) {
+		c := cache.New(cache.WithBlockOverwrite())
+		key := "name"
+		value := []byte("john")
+		otherValue := []byte("bob")
+
+		if !c.Set(key, value) {
+			t.Fatal("failed to set at first time")
+		}
+
+		got, ok := c.Get(key)
+		if !ok {
+			t.Fatal("value was not written")
+		}
+		if !bytes.Equal(got, value) {
+			t.Fatal("written value is different")
+		}
+
+		if c.Set(key, otherValue) {
+			t.Fatal("should not overwrite key")
+		}
+
+		got, ok = c.Get(key)
+		if !ok {
+			t.Fatal("value was removed somehow")
+		}
+		if !bytes.Equal(got, value) {
+			t.Fatal("written value is different after try to overwrite")
+		}
+	})
 }

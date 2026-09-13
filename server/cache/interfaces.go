@@ -1,7 +1,7 @@
 package cache
 
 type Setter interface {
-	Set(string, []byte)
+	Set(string, []byte) bool
 }
 
 type Getter interface {
